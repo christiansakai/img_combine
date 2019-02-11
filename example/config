@@ -1,0 +1,16 @@
+OUTPUT = example/images/output.jpg
+ROWS = 2
+COLS = 5
+HEIGHT = 400
+WIDTH = 1000
+BACKGROUND_COLOR = #FFFFFF
+IMAGE = 0,0,example/images/cat.jpg
+IMAGE = 0,1,example/images/cat2.jpg
+IMAGE = 0,2,example/images/cat3.jpg
+IMAGE = 0,3,example/images/cat4.png
+IMAGE = 0,4,example/images/cat5.jpg
+IMAGE = 1,0,example/images/chinchilla.jpg
+IMAGE = 1,1,example/images/dog.jpg
+IMAGE = 1,2,example/images/dog2.jpg
+IMAGE = 1,3,example/images/dog3.jpg
+IMAGE = 1,4,example/images/tiger.jpg
