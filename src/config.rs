@@ -3,44 +3,6 @@ use std::fmt;
 use std::error;
 
 #[derive(Debug)]
-pub struct ImageConfig {
-    pub row: usize,
-    pub col: usize,
-    pub path: String,
-}
-
-impl ImageConfig {
-    fn new(image_str: &str) -> Result<ImageConfig, ConfigError> {
-        let image_str_split: Vec<&str> = image_str
-            .split(',')
-            .collect();
-
-        let row = image_str_split.get(0);
-        let col = image_str_split.get(1);
-        let path = image_str_split.get(2);
-
-        match (row, col, path) {
-            (Some(row), Some(col), Some(path)) => {
-                let row = row.parse();
-                let col = col.parse();
-
-                match (row, col) {
-                    (Ok(row), Ok(col)) => {
-                        Ok(ImageConfig {
-                            row,
-                            col,
-                            path: (*path).to_owned(),
-                        })
-                    },
-                    _ => Err(ConfigError::ParseImageError),
-                }
-            },
-            _ => Err(ConfigError::ParseImageError),
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct Config {
     pub output: String,
     pub rows: usize,
@@ -162,3 +124,44 @@ impl error::Error for ConfigError {
         None
     }
 }
+
+#[derive(Debug)]
+pub struct ImageConfig {
+    pub row: usize,
+    pub col: usize,
+    pub path: String,
+}
+
+impl ImageConfig {
+    fn new(image_str: &str) -> Result<ImageConfig, ConfigError> {
+        let image_str_split: Vec<&str> = image_str
+            .split(',')
+            .collect();
+
+        let row = image_str_split.get(0);
+        let col = image_str_split.get(1);
+        let path = image_str_split.get(2);
+
+        match (row, col, path) {
+            (Some(row), Some(col), Some(path)) => {
+                let row = row.parse();
+                let col = col.parse();
+
+                match (row, col) {
+                    (Ok(row), Ok(col)) => {
+                        Ok(ImageConfig {
+                            row,
+                            col,
+                            path: (*path).to_owned(),
+                        })
+                    },
+                    _ => Err(ConfigError::ParseImageError),
+                }
+            },
+            _ => Err(ConfigError::ParseImageError),
+        }
+    }
+}
+
+
+

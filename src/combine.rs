@@ -3,6 +3,7 @@ use image::GenericImageView;
 
 use std::path;
 use std::env;
+use std::io;
 use crate::config::Config;
 
 type Image = image::ImageBuffer<image::Rgba<u8>, Vec<u8>>;
@@ -22,14 +23,12 @@ pub fn combine(config: Config) {
     }
 
     for img in &config.images {
-        // TODO: check error here
-        let mut absolute_path = env::current_dir().unwrap();
-        absolute_path.push(&img.path);
+        let path = path::Path::new(&img.path);
 
-        let image_file = image::open(&absolute_path)
+        let image_file = image::open(&path)
             .unwrap();
 
-        println!("img.path {:?}", absolute_path);
+        // println!("img.path {:?}", absolute_path);
         // TODO: usize vs u32
         let resized_img = resize(
             cell_width as u32,
