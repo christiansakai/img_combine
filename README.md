@@ -21,3 +21,7 @@ IMAGE = 1,1,cat4.png
 ```
 
 See `examples` folder for more details.
+
+![output](examples/output.jpg)
+
+

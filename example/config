@@ -1,4 +1,4 @@
-OUTPUT = example/images/output.jpg
+OUTPUT = example/output.jpg
 ROWS = 2
 COLS = 5
 HEIGHT = 400
