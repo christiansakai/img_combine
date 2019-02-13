@@ -2,13 +2,13 @@ use image;
 use image::GenericImageView;
 
 use std::path;
-use std::env;
-use std::io;
+
 use crate::config::Config;
+use crate::error::AppError;
 
 type Image = image::ImageBuffer<image::Rgba<u8>, Vec<u8>>;
 
-pub fn combine(config: Config) {
+pub fn combine(config: Config) -> Result<(), AppError> {
     let cell_width = config.width / config.cols;
     let cell_height = config.height / config.rows;
 
@@ -26,42 +26,50 @@ pub fn combine(config: Config) {
         let path = path::Path::new(&img.path);
 
         let image_file = image::open(&path)
-            .unwrap();
+            .map_err(|_| AppError::LoadImageError)?;
 
-        // println!("img.path {:?}", absolute_path);
-        // TODO: usize vs u32
         let resized_img = resize(
-            cell_width as u32,
-            cell_height as u32,
+            cell_width,
+            cell_height,
             &image_file,
-            // TODO: replace with background_color
-            image::Rgba([100, 100, 100, 0]),
+            image::Rgba([
+                config.background_color.r,
+                config.background_color.g,
+                config.background_color.b,
+                config.background_color.a,
+            ]),
         );
 
         images_matrix[img.row][img.col] = Some(resized_img);
     }
 
-    let mut combined: Image = image::ImageBuffer::new(config.width as u32, config.height as u32);
+    let mut combined: Image = image::ImageBuffer::new(config.width, config.height);
     for (x, y, pixel) in combined.enumerate_pixels_mut() {
-        let img_row = (y / cell_height as u32); 
-        let img_col = (x / cell_width as u32);
+        let img_row = y / cell_height; 
+        let img_col = x / cell_width;
 
         let img = &images_matrix[img_row as usize][img_col as usize];
         match img {
             Some(image) => {
-                let img_pixel = image.get_pixel(x - (img_col * cell_width as u32), y - (img_row * cell_height as u32));
-
+                let img_pixel = image.get_pixel(x - (img_col * cell_width), y - (img_row * cell_height));
                 *pixel = *img_pixel;
             }
 
             _ => {
-                // TODO: replace with background_color
-                *pixel = image::Rgba([100, 100, 100, 0]);
+                *pixel = image::Rgba([
+                    config.background_color.r,
+                    config.background_color.g,
+                    config.background_color.b,
+                    config.background_color.a,
+                ])
             }
         }
     }
 
-    combined.save(config.output).unwrap();
+    combined.save(config.output)
+        .map_err(|_| AppError::SaveImageError)?;
+
+    Ok(())
 }
 
 fn resize(

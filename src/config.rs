@@ -1,20 +1,20 @@
 use std::collections::HashMap;
-use std::fmt;
-use std::error;
+
+use crate::error::AppError;
 
 #[derive(Debug)]
 pub struct Config {
     pub output: String,
-    pub rows: usize,
-    pub cols: usize,
-    pub height: usize,
-    pub width: usize,
-    pub background_color: String,
+    pub rows: u32,
+    pub cols: u32,
+    pub height: u32,
+    pub width: u32,
+    pub background_color: Rgba,
     pub images: Vec<ImageConfig>,
 }
 
 impl Config {
-    pub fn new(config_str: &str) -> Result<Config, ConfigError> {
+    pub fn new(config_str: &str) -> Result<Config, AppError> {
         let str_split = config_str.trim().split('\n');
         let mut map = HashMap::new();
         let mut images = Vec::new();
@@ -37,37 +37,55 @@ impl Config {
         }
 
         let output = map.get("output")
-            .ok_or(ConfigError::NeedOutputError)?;
+            .ok_or(AppError::NeedOutputError)?;
 
         let rows = map.get("rows")
-            .ok_or(ConfigError::NeedRowsError)?
-            .parse::<usize>()
-            .map_err(|_| ConfigError::ParseRowsError)?;
+            .ok_or(AppError::NeedRowsError)?
+            .parse()
+            .map_err(|_| AppError::ParseRowsError)?;
 
         let cols = map.get("cols")
-            .ok_or(ConfigError::NeedColsError)?
-            .parse::<usize>()
-            .map_err(|_| ConfigError::ParseColsError)?;
+            .ok_or(AppError::NeedColsError)?
+            .parse()
+            .map_err(|_| AppError::ParseColsError)?;
 
         if rows < 1 || cols < 1 {
-            return Err(ConfigError::InvalidRowsColsError);
+            return Err(AppError::InvalidRowsColsError);
         }
 
         let height = map.get("height")
-            .ok_or(ConfigError::NeedHeightError)?
-            .parse::<usize>()
-            .map_err(|_| ConfigError::ParseHeightError)?;
+            .ok_or(AppError::NeedHeightError)?
+            .parse()
+            .map_err(|_| AppError::ParseHeightError)?;
 
         let width = map.get("width")
-            .ok_or(ConfigError::NeedWidthError)?
-            .parse::<usize>()
-            .map_err(|_| ConfigError::ParseWidthError)?;
+            .ok_or(AppError::NeedWidthError)?
+            .parse()
+            .map_err(|_| AppError::ParseWidthError)?;
 
-        let background_color = map.get("background_color")
-            .ok_or(ConfigError::NeedBackgroundColorError)?;
+        let channels: Vec<&str> = map.get("background_color")
+            .ok_or(AppError::NeedBackgroundColorError)?
+            .split(',')
+            .collect();
+
+        let mut background_color: Vec<u8> = Vec::new();
+        for channel_str in channels {
+            let channel = channel_str
+                .parse()
+                .map_err(|_| AppError::ParseBackgroundColorError)?;
+
+            background_color.push(channel);
+        }
+
+        let bgcolor_rgba = Rgba {
+            r: background_color[0],
+            g: background_color[1],
+            b: background_color[2],
+            a: background_color[3],
+        };
 
         if images.len() < 1 {
-            return Err(ConfigError::NeedImagesError);
+            return Err(AppError::NeedImagesError);
         }
 
         Ok(Config {
@@ -76,52 +94,9 @@ impl Config {
             cols,
             height,
             width,
-            background_color: background_color.to_string(),
+            background_color: bgcolor_rgba,
             images,
         })
-    }
-}
-
-#[derive(Debug)]
-pub enum ConfigError {
-    NeedOutputError,
-    NeedRowsError,
-    ParseRowsError,
-    NeedColsError,
-    ParseColsError,
-    NeedHeightError,
-    ParseHeightError,
-    NeedWidthError,
-    ParseWidthError,
-    NeedBackgroundColorError,
-    NeedImagesError,
-    ParseImageError,
-    InvalidRowsColsError,
-}
-
-impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ConfigError::NeedOutputError => write!(f, "Need OUTPUT in config"),
-            ConfigError::NeedRowsError => write!(f, "Need ROWS in config"),
-            ConfigError::ParseRowsError => write!(f, "Failed to parse ROWS"),
-            ConfigError::NeedColsError => write!(f, "Need COL in config"),
-            ConfigError::ParseColsError => write!(f, "Failed to parse COLS"),
-            ConfigError::NeedHeightError => write!(f, "Need HEIGHT in config"),
-            ConfigError::ParseHeightError => write!(f, "Failed to parse HEIGHT"),
-            ConfigError::NeedWidthError => write!(f, "Need WIDTH in config"),
-            ConfigError::ParseWidthError => write!(f, "Failed to parse WIDTH"),
-            ConfigError::NeedBackgroundColorError => write!(f, "Need BACKGROUND_COLOR in config"),
-            ConfigError::NeedImagesError => write!(f, "Need IMAGE in config"),
-            ConfigError::ParseImageError => write!(f, "IMAGE needs to be in format <row,col,path_to_image>"),
-            ConfigError::InvalidRowsColsError => write!(f, "ROWS or COLS cannot be lesser than 1"),
-        }
-    }
-}
-
-impl error::Error for ConfigError {
-    fn cause(&self) -> Option<&error::Error> {
-        None
     }
 }
 
@@ -133,7 +108,7 @@ pub struct ImageConfig {
 }
 
 impl ImageConfig {
-    fn new(image_str: &str) -> Result<ImageConfig, ConfigError> {
+    fn new(image_str: &str) -> Result<ImageConfig, AppError> {
         let image_str_split: Vec<&str> = image_str
             .split(',')
             .collect();
@@ -155,13 +130,18 @@ impl ImageConfig {
                             path: (*path).to_owned(),
                         })
                     },
-                    _ => Err(ConfigError::ParseImageError),
+                    _ => Err(AppError::ParseImageError),
                 }
             },
-            _ => Err(ConfigError::ParseImageError),
+            _ => Err(AppError::ParseImageError),
         }
     }
 }
 
-
-
+#[derive(Debug)]
+pub struct Rgba {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8
+}
