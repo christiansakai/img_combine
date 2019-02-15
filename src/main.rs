@@ -3,8 +3,9 @@ use std::env;
 use std::fs;
 
 mod config;
-mod combine;
 mod error;
+mod combine;
+mod combine_multithread;
 
 const HELP: &'static str = r#"
 No config file path provided.
@@ -29,6 +30,11 @@ fn main() {
     let config = config::Config::new(&string)
         .expect("Parsing config file failed");
 
-    combine::combine(config)
-        .expect("Combining images failed");
+    if config.threads == 1 {
+        combine::combine(config)
+            .expect("Combining images failed");
+    } else {
+        combine_multithread::combine(config)
+            .expect("Combining images failed");
+    }
 }

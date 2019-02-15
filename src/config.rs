@@ -11,6 +11,7 @@ pub struct Config {
     pub width: u32,
     pub background_color: Rgba,
     pub images: Vec<ImageConfig>,
+    pub threads: u8,
 }
 
 impl Config {
@@ -88,6 +89,11 @@ impl Config {
             return Err(AppError::NeedImagesError);
         }
 
+        let threads = map.get("threads")
+            .unwrap_or(&String::from("1"))
+            .parse()
+            .unwrap();
+
         Ok(Config {
             output: output.to_string(),
             rows,
@@ -96,11 +102,12 @@ impl Config {
             width,
             background_color: bgcolor_rgba,
             images,
+            threads,
         })
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImageConfig {
     pub row: usize,
     pub col: usize,
@@ -138,7 +145,7 @@ impl ImageConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Rgba {
     pub r: u8,
     pub g: u8,

@@ -4,6 +4,7 @@ COLS = 50
 HEIGHT = 3000
 WIDTH = 3000
 BACKGROUND_COLOR = 150,150,150,1
+THREADS = 4
 IMAGE = 0,0,example/images/cat.jpg
 IMAGE = 0,1,example/images/cat.jpg
 IMAGE = 0,2,example/images/cat.jpg
