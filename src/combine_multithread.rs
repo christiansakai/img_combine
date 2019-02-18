@@ -3,8 +3,10 @@ use image::GenericImageView;
 
 use std::path;
 use std::time::SystemTime;
+use std::thread;
+use std::sync::{Arc, Mutex};
 
-use crate::config::Config;
+use crate::config::{Config, ImageConfig};
 use crate::error::AppError;
 
 type Image = image::ImageBuffer<image::Rgba<u8>, Vec<u8>>;
@@ -14,6 +16,8 @@ pub fn combine(config: Config) -> Result<(), AppError> {
     let cell_height = config.height / config.rows;
 
     let mut images_matrix: Vec<Vec<Option<Image>>> = Vec::new();
+    let mut threads = Vec::new();
+
     for _ in 0..config.rows + 1 {
         let mut images_row = Vec::new();
         for _ in 0..config.cols + 1 {
@@ -25,35 +29,59 @@ pub fn combine(config: Config) -> Result<(), AppError> {
 
     let load_and_resize = SystemTime::now();
 
-    for img in &config.images {
-        let path = path::Path::new(&img.path);
+    let images_matrix = Arc::new(Mutex::new(images_matrix));
 
-        let load = SystemTime::now();
+    let image_jobs = separate(config.threads, &config.images);
 
-        let image_file = image::open(&path)
-            .map_err(|_| AppError::LoadImageError)?;
+    for image_job in image_jobs {
+        let images_matrix = images_matrix.clone();
+        let bg_color = config.background_color;
 
-        let load_finish = load.elapsed().unwrap();
-        println!("Load: {} secs", load_finish.as_secs());
+        let other_thread = thread::spawn(move || {
+            for img in image_job {
+                let img_path = img.path;
+                let path = path::Path::new(&img_path);
 
-        let resizing = SystemTime::now();
+                let load = SystemTime::now();
 
-        let resized_img = resize(
-            cell_width,
-            cell_height,
-            &image_file,
-            image::Rgba([
-                config.background_color.r,
-                config.background_color.g,
-                config.background_color.b,
-                config.background_color.a,
-            ]),
-        );
+                let image_file = image::open(&path)
+                    // TODO: Handle error
+                    .unwrap();
 
-        let resizing_finish = resizing.elapsed().unwrap();
-        println!("Resize: {} secs", resizing_finish.as_secs());
+                let load_finish = load.elapsed().unwrap();
+                println!("Load: {} secs", load_finish.as_secs());
 
-        images_matrix[img.row][img.col] = Some(resized_img);
+                let resizing = SystemTime::now();
+
+                let resized_img = resize(
+                    cell_width,
+                    cell_height,
+                    &image_file,
+                    image::Rgba([
+                        bg_color.r,
+                        bg_color.g,
+                        bg_color.b,
+                        bg_color.a,
+                    ]),
+                );
+
+                let resizing_finish = resizing.elapsed().unwrap();
+                println!("Resize: {} secs", resizing_finish.as_secs());
+
+                let mut images_matrix = images_matrix.lock()
+                    // TODO: Handle error
+                    .unwrap();
+
+                images_matrix[img.row][img.col] = Some(resized_img);
+            }
+        });
+
+        threads.push(other_thread);
+    }
+
+    for other_thread in threads {
+        // TODO: Handle error
+        other_thread.join().unwrap();
     }
 
     let load_and_resize_finish = load_and_resize.elapsed().unwrap();
@@ -66,7 +94,9 @@ pub fn combine(config: Config) -> Result<(), AppError> {
         let img_row = y / cell_height; 
         let img_col = x / cell_width;
 
+        let images_matrix = images_matrix.lock().unwrap();
         let img = &images_matrix[img_row as usize][img_col as usize];
+
         match img {
             Some(image) => {
                 let img_pixel = image.get_pixel(x - (img_col * cell_width), y - (img_row * cell_height));
@@ -131,4 +161,24 @@ fn resize(
     }
 
     padded_img
+}
+
+fn separate(group_num: u8, vector: &Vec<ImageConfig>) -> Vec<Vec<ImageConfig>> {
+    let el_per_group = vector.len() / group_num as usize;
+
+    let mut result: Vec<Vec<ImageConfig>> = Vec::new();
+
+    for el in vector {
+        match result.last_mut() {
+            Some(ref mut vec) if vec.len() < el_per_group => {
+                vec.push(el.clone());
+            },
+            _ => {
+                let new_vec = vec![el.clone()];
+                result.push(new_vec);
+            },
+        }
+    }
+    
+    result
 }
